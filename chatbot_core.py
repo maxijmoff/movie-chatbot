@@ -1,20 +1,39 @@
+import os
 import re
+import urllib.request
 import requests
 import pandas as pd
 import numpy as np
 import faiss
 from sentence_transformers import SentenceTransformer
+from kaggle.api.kaggle_api_extended import KaggleApi
 from groq import Groq
-from kaggle_secrets import UserSecretsClient
 
 # 1. API Key Setup
-user_secrets = UserSecretsClient()
-GROQ_API_KEY = user_secrets.get_secret("GROQ_API_KEY")
-SERPER_API_KEY = user_secrets.get_secret("SERPER_API_KEY")
-client = Groq(api_key=GROQ_API_KEY)
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+SERPER_API_KEY = os.getenv("SERPER_API_KEY")
 
 # 2. Load & Clean Dataset
-df = pd.read_csv("/kaggle/input/wikipedia-movie-plots/wiki_movie_plots_deduped.csv")
+def ensure_dataset():
+    dataset = "jrobischon/wikipedia-movie-plots"
+    data_dir = "data"
+    csv_path = os.path.join(data_dir, "wiki_movie_plots_deduped.csv")
+
+    if not os.path.exists(csv_path):
+        print("Downloading dataset from Kaggle...")
+        os.makedirs(data_dir, exist_ok=True)
+
+        api = KaggleApi()
+        api.authenticate() 
+        api.dataset_download_files(dataset, path=data_dir, unzip=True)
+        print("Dataset downloaded & extracted!")
+    else:
+        print("Dataset already exists!")
+
+    return csv_path
+
+CSV_PATH = ensure_dataset()
+df = pd.read_csv(CSV_PATH)
 
 df = df.rename(columns={
     "Title": "title",
